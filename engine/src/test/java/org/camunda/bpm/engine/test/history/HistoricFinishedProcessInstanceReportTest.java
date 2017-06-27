@@ -147,8 +147,8 @@ public class HistoricFinishedProcessInstanceReportTest {
   }
 
   private void checkResultNumbers(HistoricFinishedProcessInstanceReportResult result, int expectedCleanable, int expectedFinished) {
-    assertEquals(expectedCleanable, result.getCleanableProcessInstanceCount().longValue());
-    assertEquals(expectedFinished, result.getFinishedProcessInstanceCount().longValue());
+    assertEquals(expectedCleanable, result.getCleanableProcessInstanceCount());
+    assertEquals(expectedFinished, result.getFinishedProcessInstanceCount());
   }
 
   @Test

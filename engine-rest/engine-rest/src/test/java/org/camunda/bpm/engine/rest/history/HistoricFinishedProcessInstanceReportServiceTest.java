@@ -58,7 +58,7 @@ public class HistoricFinishedProcessInstanceReportServiceTest extends AbstractRe
     when(reportResult.getProcessDefinitionKey()).thenReturn("aKey");
     when(reportResult.getProcessDefinitionName()).thenReturn("aName");
     when(reportResult.getProcessDefinitionVersion()).thenReturn(42);
-    when(reportResult.getHistoryTimeToLive()).thenReturn("5");
+    when(reportResult.getHistoryTimeToLive()).thenReturn(5);
     when(reportResult.getFinishedProcessInstanceCount()).thenReturn(10l);
     when(reportResult.getCleanableProcessInstanceCount()).thenReturn(5l);
 

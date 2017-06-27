@@ -126,10 +126,10 @@ public class HistoricProcessInstanceManager extends AbstractHistoricManager {
   }
 
   @SuppressWarnings("unchecked")
-  public List<HistoricFinishedProcessInstanceReportResult> findFinishedProcessInstancesReport() {
+  public List<HistoricFinishedProcessInstanceReportResult> findFinishedProcessInstancesReportResults() {
     ListQueryParameterObject parameterObject = new ListQueryParameterObject();
     parameterObject.setParameter(ClockUtil.getCurrentTime());
-    getAuthorizationManager().configureQuery(parameterObject, Resources.PROCESS_DEFINITION, "RES.KEY_", Permissions.READ, Permissions.READ_HISTORY);
+    getAuthorizationManager().configureQueryHistoricFinishedInstanceReport(parameterObject, Resources.PROCESS_DEFINITION);
     getTenantManager().configureQuery(parameterObject);
     return (List<HistoricFinishedProcessInstanceReportResult>) getDbEntityManager().selectList("selectFinishedProcessInstancesReportEntities", parameterObject);
   }

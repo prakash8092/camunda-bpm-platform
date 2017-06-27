@@ -15,6 +15,10 @@ package org.camunda.bpm.engine.history;
 
 import java.util.List;
 
+/**
+ * Defines a report query for finished process instances.
+ *
+ */
 public interface HistoricFinishedProcessInstanceReport {
 
   List<HistoricFinishedProcessInstanceReportResult> count();

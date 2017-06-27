@@ -300,7 +300,7 @@ public class HistoricDecisionInstanceManager extends AbstractHistoricManager {
   public List<HistoricFinishedDecisionInstanceReportResult> findFinishedDecisionInstancesReport() {
     ListQueryParameterObject parameterObject = new ListQueryParameterObject();
     parameterObject.setParameter(ClockUtil.getCurrentTime());
-    getAuthorizationManager().configureQuery(parameterObject, Resources.DECISION_DEFINITION, "RES.KEY_", Permissions.READ, Permissions.READ_HISTORY);
+    getAuthorizationManager().configureQueryHistoricFinishedInstanceReport(parameterObject, Resources.DECISION_DEFINITION);
     getTenantManager().configureQuery(parameterObject);
     return (List<HistoricFinishedDecisionInstanceReportResult>) getDbEntityManager().selectList("selectFinishedDecisionInstancesReportEntities", parameterObject);
   }

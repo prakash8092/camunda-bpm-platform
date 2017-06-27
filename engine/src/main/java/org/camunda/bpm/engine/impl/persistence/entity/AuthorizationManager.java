@@ -45,6 +45,7 @@ import org.camunda.bpm.engine.authorization.MissingAuthorization;
 import org.camunda.bpm.engine.authorization.Permission;
 import org.camunda.bpm.engine.authorization.Permissions;
 import org.camunda.bpm.engine.authorization.Resource;
+import org.camunda.bpm.engine.authorization.Resources;
 import org.camunda.bpm.engine.impl.AbstractQuery;
 import org.camunda.bpm.engine.impl.ActivityStatisticsQueryImpl;
 import org.camunda.bpm.engine.impl.AuthorizationQueryImpl;
@@ -359,19 +360,31 @@ public class AuthorizationManager extends AbstractManager {
     }
   }
 
-  public void configureQuery(ListQueryParameterObject query, Resource resource, String queryParam, Permission... permission) {
+//  public void configureQuery(ListQueryParameterObject query, Resource resource, String queryParam, Permission... permission) {
+//    configureQuery(query);
+//
+//    //TODO
+////    PermissionCheckBuilder builder = new PermissionCheckBuilder();
+////    builder.disjunctive();
+////    for (Permission current : permission) {
+////      builder.atomicCheckForResourceId(resource, queryParam, current);
+////    }
+//    CompositePermissionCheck compositePermissionCheck = new CompositePermissionCheck(false);
+//    query.getAuthCheck().setPermissionChecks(compositePermissionCheck);
+//
+//    for (Permission current : permission) {
+//      PermissionCheck check = new PermissionCheck();
+//      check.setResource(resource);
+//      check.setResourceIdQueryParam(queryParam);
+//      check.setPermission(current);
+//      compositePermissionCheck.addAtomicCheck(check);
+//    }
+//  }
+
+  public void configureQueryHistoricFinishedInstanceReport(ListQueryParameterObject query, Resource resource) {
     configureQuery(query);
-
-    CompositePermissionCheck compositePermissionCheck = new CompositePermissionCheck(false);
-    query.getAuthCheck().setPermissionChecks(compositePermissionCheck);
-
-    for (int i = 0; i < permission.length; i++) {
-      PermissionCheck check = new PermissionCheck();
-      check.setResource(resource);
-      check.setResourceIdQueryParam(queryParam);
-      check.setPermission(permission[i]);
-      compositePermissionCheck.addAtomicCheck(check);
-    }
+    addPermissionCheck(query, resource, "RES.KEY_", Permissions.READ);
+    addPermissionCheck(query, resource, "RES.KEY_", Permissions.READ_HISTORY);
   }
 
   public void enableQueryAuthCheck(AuthorizationCheck authCheck) {
