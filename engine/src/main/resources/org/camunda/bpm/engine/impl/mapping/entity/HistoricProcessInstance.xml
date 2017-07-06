@@ -410,16 +410,13 @@
 
     <select id="selectHistoricProcessInstanceIdsForCleanup" parameterType="org.camunda.bpm.engine.impl.db.ListQueryParameterObject" resultType="string">
         ${limitBefore}
-        <include refid="org.camunda.bpm.engine.impl.persistence.entity.Commons.bindOrderBy"/>
-        SELECT DISTINCT RES.* FROM (
         SELECT pi.PROC_INST_ID_, pi.END_TIME_
         ${limitBetween}
         <include refid="selectHistoricProcessInstanceIdsForCleanupSql"/>
         <bind name="days" value="'PD.HISTORY_TTL_'"/>
         <bind name="date" value="'PI.END_TIME_'"/>
         <bind name="currentTimestamp" value="parameter"/>
-        AND ${dayComparator} ) RES
-        ${orderBy}
+        AND ${dayComparator}
         ${limitAfter}
     </select>
 
