@@ -48,6 +48,7 @@ import org.camunda.bpm.engine.impl.util.json.JSONObject;
 import org.camunda.bpm.engine.management.Metrics;
 import org.camunda.bpm.engine.repository.CaseDefinition;
 import org.camunda.bpm.engine.repository.DecisionDefinition;
+import org.camunda.bpm.engine.repository.DeploymentWithDefinitions;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.camunda.bpm.engine.runtime.CaseInstance;
 import org.camunda.bpm.engine.runtime.Job;
@@ -111,6 +112,7 @@ public class HistoryCleanupTest {
 
   @Rule
   public RuleChain ruleChain = RuleChain.outerRule(bootstrapRule).around(engineRule).around(testRule);
+  private String deployId;
 
   @Before
   public void init() {
@@ -120,7 +122,8 @@ public class HistoryCleanupTest {
     caseService = engineRule.getCaseService();
     repositoryService = engineRule.getRepositoryService();
     processEngineConfiguration = engineRule.getProcessEngineConfiguration();
-    testRule.deploy("org/camunda/bpm/engine/test/api/oneTaskProcess.bpmn20.xml", "org/camunda/bpm/engine/test/api/dmn/Example.dmn", "org/camunda/bpm/engine/test/api/cmmn/oneTaskCaseWithHistoryTimeToLive.cmmn");
+    DeploymentWithDefinitions deploy = testRule.deploy("org/camunda/bpm/engine/test/api/oneTaskProcess.bpmn20.xml", "org/camunda/bpm/engine/test/api/dmn/Example.dmn", "org/camunda/bpm/engine/test/api/cmmn/oneTaskCaseWithHistoryTimeToLive.cmmn");
+    deployId = deploy.getId();
   }
 
   @After
@@ -170,6 +173,8 @@ public class HistoryCleanupTest {
     for (HistoricCaseInstance historicCaseInstance: historicCaseInstances) {
       historyService.deleteHistoricCaseInstance(historicCaseInstance.getId());
     }
+
+    repositoryService.deleteDeployment(deployId, true, true, true);
 
     clearMetrics();
 
