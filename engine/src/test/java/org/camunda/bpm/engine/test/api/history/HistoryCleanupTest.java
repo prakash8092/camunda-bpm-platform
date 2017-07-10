@@ -229,68 +229,6 @@ public class HistoryCleanupTest {
   }
 
   @Test
-  public void testSortHistoricProcessInstancesForCleanup() {
-    Date oldCurrentTime = ClockUtil.getCurrentTime();
-    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -12));
-
-    final String processDefinitionKey1 = "firstProcess";
-    BpmnModelInstance model1 = Bpmn.createExecutableProcess(processDefinitionKey1)
-        .camundaHistoryTimeToLive(5)
-        .startEvent()
-          .userTask("userTask")
-        .endEvent()
-        .done();
-    testRule.deploy(model1);
-    ProcessInstance processInstance1 = runtimeService.startProcessInstanceByKey(processDefinitionKey1);
-    runtimeService.deleteProcessInstances(Arrays.asList(processInstance1.getId()), null, true, true);
-
-    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -11));
-
-    final String processDefinitionKey2 = "secondProcess";
-    BpmnModelInstance model2 = Bpmn.createExecutableProcess(processDefinitionKey2)
-        .camundaHistoryTimeToLive(5)
-        .startEvent()
-          .userTask("userTask")
-        .endEvent()
-        .done();
-    testRule.deploy(model2);
-    ProcessInstance processInstance2 = runtimeService.startProcessInstanceByKey(processDefinitionKey2);
-    runtimeService.deleteProcessInstances(Arrays.asList(processInstance2.getId()), null, true, true);
-
-    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -10));
-
-    final String processDefinitionKey3 = "thirdProcess";
-    BpmnModelInstance model3 = Bpmn.createExecutableProcess(processDefinitionKey3)
-        .camundaHistoryTimeToLive(5)
-        .startEvent()
-          .userTask("userTask")
-        .endEvent()
-        .done();
-    testRule.deploy(model3);
-    ProcessInstance processInstance3 = runtimeService.startProcessInstanceByKey(processDefinitionKey3);
-    runtimeService.deleteProcessInstances(Arrays.asList(processInstance3.getId()), null, true, true);
-
-    ClockUtil.setCurrentTime(oldCurrentTime);
-
-    processEngineConfiguration.getCommandExecutorTxRequired().execute(new Command<Void>() {
-      public Void execute(CommandContext commandContext) {
-
-        HistoricProcessInstanceManager historicProcessInstanceManager = commandContext.getHistoricProcessInstanceManager();
-        List<String> historicProcessInstanceIds = historicProcessInstanceManager.findHistoricProcessInstanceIdsForCleanup(7);
-        assertEquals(3, historicProcessInstanceIds.size());
-        HistoricProcessInstanceEntity historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(0));
-        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey1);
-        historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(1));
-        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey2);
-        historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(2));
-        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey3);
-
-        return null;
-      }
-    });
-  }
-
-  @Test
   @Deployment(resources = { "org/camunda/bpm/engine/test/dmn/businessruletask/DmnBusinessRuleTaskTest.testDecisionRef.bpmn20.xml",
       "org/camunda/bpm/engine/test/api/history/testDmnWithPojo.dmn11.xml", "org/camunda/bpm/engine/test/api/authorization/oneTaskCase.cmmn" })
   public void testHistoryCleanupOnlyDecisionInstancesRemoved() {
