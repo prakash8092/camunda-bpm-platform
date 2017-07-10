@@ -15,6 +15,7 @@ package org.camunda.bpm.engine.test.api.history;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -40,6 +41,8 @@ import org.camunda.bpm.engine.impl.jobexecutor.ExecuteJobHelper;
 import org.camunda.bpm.engine.impl.jobexecutor.historycleanup.HistoryCleanupJobHandlerConfiguration;
 import org.camunda.bpm.engine.impl.metrics.Meter;
 import org.camunda.bpm.engine.impl.persistence.entity.HistoricIncidentEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.HistoricProcessInstanceEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.HistoricProcessInstanceManager;
 import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.SuspensionState;
 import org.camunda.bpm.engine.impl.util.ClockUtil;
@@ -48,7 +51,6 @@ import org.camunda.bpm.engine.impl.util.json.JSONObject;
 import org.camunda.bpm.engine.management.Metrics;
 import org.camunda.bpm.engine.repository.CaseDefinition;
 import org.camunda.bpm.engine.repository.DecisionDefinition;
-import org.camunda.bpm.engine.repository.DeploymentWithDefinitions;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.camunda.bpm.engine.runtime.CaseInstance;
 import org.camunda.bpm.engine.runtime.Job;
@@ -61,12 +63,15 @@ import org.camunda.bpm.engine.test.util.ProcessEngineTestRule;
 import org.camunda.bpm.engine.test.util.ProvidedProcessEngineRule;
 import org.camunda.bpm.engine.variable.VariableMap;
 import org.camunda.bpm.engine.variable.Variables;
+import org.camunda.bpm.model.bpmn.Bpmn;
+import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -112,7 +117,6 @@ public class HistoryCleanupTest {
 
   @Rule
   public RuleChain ruleChain = RuleChain.outerRule(bootstrapRule).around(engineRule).around(testRule);
-  private String deployId;
 
   @Before
   public void init() {
@@ -122,8 +126,7 @@ public class HistoryCleanupTest {
     caseService = engineRule.getCaseService();
     repositoryService = engineRule.getRepositoryService();
     processEngineConfiguration = engineRule.getProcessEngineConfiguration();
-    DeploymentWithDefinitions deploy = testRule.deploy("org/camunda/bpm/engine/test/api/oneTaskProcess.bpmn20.xml", "org/camunda/bpm/engine/test/api/dmn/Example.dmn", "org/camunda/bpm/engine/test/api/cmmn/oneTaskCaseWithHistoryTimeToLive.cmmn");
-    deployId = deploy.getId();
+    testRule.deploy("org/camunda/bpm/engine/test/api/oneTaskProcess.bpmn20.xml", "org/camunda/bpm/engine/test/api/dmn/Example.dmn", "org/camunda/bpm/engine/test/api/cmmn/oneTaskCaseWithHistoryTimeToLive.cmmn");
   }
 
   @After
@@ -174,8 +177,6 @@ public class HistoryCleanupTest {
       historyService.deleteHistoricCaseInstance(historicCaseInstance.getId());
     }
 
-    repositoryService.deleteDeployment(deployId, true, true, true);
-
     clearMetrics();
 
   }
@@ -225,6 +226,68 @@ public class HistoryCleanupTest {
     assertTrue(removedCaseInstances > 0);
 
     assertEquals(15, removedProcessInstances + removedCaseInstances + removedDecisionInstances);
+  }
+
+  @Test
+  public void testSortHistoricProcessInstancesForCleanup() {
+    Date oldCurrentTime = ClockUtil.getCurrentTime();
+    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -12));
+
+    final String processDefinitionKey1 = "firstProcess";
+    BpmnModelInstance model1 = Bpmn.createExecutableProcess(processDefinitionKey1)
+        .camundaHistoryTimeToLive(5)
+        .startEvent()
+          .userTask("userTask")
+        .endEvent()
+        .done();
+    testRule.deploy(model1);
+    ProcessInstance processInstance1 = runtimeService.startProcessInstanceByKey(processDefinitionKey1);
+    runtimeService.deleteProcessInstances(Arrays.asList(processInstance1.getId()), null, true, true);
+
+    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -11));
+
+    final String processDefinitionKey2 = "secondProcess";
+    BpmnModelInstance model2 = Bpmn.createExecutableProcess(processDefinitionKey2)
+        .camundaHistoryTimeToLive(5)
+        .startEvent()
+          .userTask("userTask")
+        .endEvent()
+        .done();
+    testRule.deploy(model2);
+    ProcessInstance processInstance2 = runtimeService.startProcessInstanceByKey(processDefinitionKey2);
+    runtimeService.deleteProcessInstances(Arrays.asList(processInstance2.getId()), null, true, true);
+
+    ClockUtil.setCurrentTime(DateUtils.addDays(oldCurrentTime, -10));
+
+    final String processDefinitionKey3 = "thirdProcess";
+    BpmnModelInstance model3 = Bpmn.createExecutableProcess(processDefinitionKey3)
+        .camundaHistoryTimeToLive(5)
+        .startEvent()
+          .userTask("userTask")
+        .endEvent()
+        .done();
+    testRule.deploy(model3);
+    ProcessInstance processInstance3 = runtimeService.startProcessInstanceByKey(processDefinitionKey3);
+    runtimeService.deleteProcessInstances(Arrays.asList(processInstance3.getId()), null, true, true);
+
+    ClockUtil.setCurrentTime(oldCurrentTime);
+
+    processEngineConfiguration.getCommandExecutorTxRequired().execute(new Command<Void>() {
+      public Void execute(CommandContext commandContext) {
+
+        HistoricProcessInstanceManager historicProcessInstanceManager = commandContext.getHistoricProcessInstanceManager();
+        List<String> historicProcessInstanceIds = historicProcessInstanceManager.findHistoricProcessInstanceIdsForCleanup(7);
+        assertEquals(3, historicProcessInstanceIds.size());
+        HistoricProcessInstanceEntity historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(0));
+        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey1);
+        historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(1));
+        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey2);
+        historicProcessInstance = historicProcessInstanceManager.findHistoricProcessInstance(historicProcessInstanceIds.get(2));
+        assertEquals(historicProcessInstance.getProcessDefinitionKey(), processDefinitionKey3);
+
+        return null;
+      }
+    });
   }
 
   @Test
@@ -477,7 +540,7 @@ public class HistoryCleanupTest {
   @Deployment(resources = { "org/camunda/bpm/engine/test/api/twoTasksProcess.bpmn20.xml" })
   public void testHistoryCleanupJobDefaultTTL() {
     //given
-    prepareBPMNData(15, "twoTasksProcess");
+    prepareBPMNData(15, "twoTasksProcess", DAYS_IN_THE_PAST);
 
     ClockUtil.setCurrentTime(new Date());
     //when
@@ -1074,14 +1137,14 @@ public class HistoryCleanupTest {
 
   private void prepareData(int instanceCount) {
     int createdInstances = instanceCount / 3;
-    prepareBPMNData(createdInstances, ONE_TASK_PROCESS);
+    prepareBPMNData(createdInstances, ONE_TASK_PROCESS, DAYS_IN_THE_PAST);
     prepareDMNData(createdInstances);
     prepareCMMNData(instanceCount - 2*createdInstances);
   }
 
-  private void prepareBPMNData(int instanceCount, String businesskey) {
+  private void prepareBPMNData(int instanceCount, String businesskey, int daysInThePast) {
     Date oldCurrentTime = ClockUtil.getCurrentTime();
-    ClockUtil.setCurrentTime(DateUtils.addDays(new Date(), DAYS_IN_THE_PAST));
+    ClockUtil.setCurrentTime(DateUtils.addDays(new Date(), daysInThePast));
     final List<String> ids = prepareHistoricProcesses(businesskey, getVariables(), instanceCount);
     runtimeService.deleteProcessInstances(ids, null, true, true);
     ClockUtil.setCurrentTime(oldCurrentTime);
